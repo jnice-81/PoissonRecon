@@ -64,22 +64,10 @@ protected:
 // Time Stuff //
 ////////////////
 #include <string.h>
-#include <sys/timeb.h>
-#ifndef WIN32
-#include <sys/time.h>
-#endif // WIN32
 
 inline double Time( void )
 {
-#ifdef WIN32
-	struct _timeb t;
-	_ftime( &t );
-	return double( t.time ) + double( t.millitm ) / 1000.0;
-#else // WIN32
-	struct timeval t;
-	gettimeofday( &t , NULL );
-	return t.tv_sec + double( t.tv_usec ) / 1000000;
-#endif // WIN32
+	return 0; //Removed as platform dependent
 }
 
 #include <cstdio>
@@ -244,79 +232,9 @@ unsigned int FunctionCallNotifier::_Depth = 0;
 struct StackTracer
 {
 	static const char *exec;
-#if defined(_WIN32) || defined( _WIN64 )
 	static void Trace( void )
 	{
-	}
-#else // !WINDOWS
-	static void Trace( void )
-	{
-		static std::mutex mutex;
-		std::lock_guard< std::mutex > lock(mutex);
-
-		// Code borrowed from:
-		// https://stackoverflow.com/questions/77005/how-to-automatically-generate-a-stacktrace-when-my-program-crashes
-		// and
-		// https://stackoverflow.com/questions/15129089/is-there-a-way-to-dump-stack-trace-with-line-number-from-a-linux-release-binary/15130037
-		void * trace[128];
-		int size = backtrace( trace , 128 );
-
-		char ** messages = backtrace_symbols( trace , size );
-		for( int i=1 ; i< size && messages!=NULL ; ++i )
-		{
-			char *mangled_name=0 , *offset_begin=0 , *offset_end=0;
-
-			char syscom[1024];
-			sprintf( syscom , "addr2line %p -e %s" , trace[i] , exec ); //last parameter is the name of this app
-			if( !system( syscom ) ){}
-
-			// find parantheses and +address offset surrounding mangled name
-			for( char *p=messages[i] ; *p ; ++p )
-			{
-				if     ( *p=='(' ) mangled_name = p; 
-				else if( *p=='+' ) offset_begin = p;
-				else if( *p==')' )
-				{
-					offset_end = p;
-					break;
-				}
-			}
-
-			// if the line could be processed, attempt to demangle the symbol
-			if( mangled_name && offset_begin && offset_end && mangled_name<offset_begin )
-			{
-				*mangled_name++ = '\0';
-				*offset_begin++ = '\0';
-				*offset_end++ = '\0';
-
-				int status;
-				char * real_name = abi::__cxa_demangle(mangled_name, 0, 0, &status);
-
-				// if demangling is successful, output the demangled function name
-				if( !status )
-				{
-					std::cerr << "\t(" << i << ") " << messages[i] << " : " << real_name << "+" << offset_begin << offset_end  << std::endl;
-					std::cout << "\t(" << i << ") " << messages[i] << " : " << real_name << "+" << offset_begin << offset_end  << std::endl;
-				}
-				// otherwise, output the mangled function name
-				else
-				{
-					std::cerr << "\t(" << i << ") " << messages[i] << " : " << mangled_name << "+" << offset_begin << offset_end << std::endl;
-					std::cout << "\t(" << i << ") " << messages[i] << " : " << mangled_name << "+" << offset_begin << offset_end << std::endl;
-				}
-				free( real_name );
-			}
-			// otherwise, print the whole line
-			else
-			{
-				std::cerr << "\t(" << i << ") " << messages[i] << std::endl;
-				std::cout << "\t(" << i << ") " << messages[i] << std::endl;
-			}
-		}
-
-		free( messages );
-	}
-#endif // WINDOWS
+	} // Removed as platform dependent
 };
 const char *StackTracer::exec;
 
